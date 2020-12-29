@@ -11,6 +11,10 @@
 #define KC_ALFT LALT(KC_LEFT)
 #define KC_ARGH LALT(KC_RGHT)
 
+#define MT_RSFT RSFT_T(KC_UP)
+#define MT_RALT RALT_T(KC_LEFT)
+#define MT_RCTL RCTL_T(KC_RIGHT)
+
 enum custom_keycodes
 {
   SL_FIRST = SAFE_RANGE,
