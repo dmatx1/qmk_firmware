@@ -32,7 +32,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         SL_GRV,  SL_1,    SL_2,    SL_3,    SL_4,    SL_5,    SL_6,                      SL_7,    SL_8,    SL_9,    SL_0,    SL_MINS, SL_EQL,  _______, _______,   _______, _______, _______,
         _______,          KC_BTN1, KC_MS_U, KC_BTN2, _______, _______,                   _______, _______, _______, _______, _______, SL_LBRC, SL_RBRC, SL_NUHS,   _______, _______, _______,
         _______,          KC_MS_L, KC_MS_D, KC_MS_R, _______, _______,                   _______, _______, _______, _______, SL_SCLN, SL_QUOT, _______,
-        _______, SL_NUBS, _______, _______, _______, _______, _______,          _______, _______, _______, SL_COMM, SL_DOT,  SL_SLSH,          _______, _______,            _______,
+        _______, SL_NUBS, _______, KC_KLEX, KC_KLCP, KL_PACL, KL_PAST,          _______, _______, _______, SL_COMM, SL_DOT,  SL_SLSH,          _______, _______,            _______,
         _______,          _______, _______,          _______,                            _______,          _______, _______,          _______,                     _______, _______, _______
     ),
     [4] = LAYOUT(
@@ -48,7 +48,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record)
 {
-  if (!secondary_layout_process_record_user(keycode, record))
+  if (!dmatx1_process_record(keycode, record))
     return false;
 
   return true;

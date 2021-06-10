@@ -1,4 +1,6 @@
 #include "dmatx1.h"
+#include "raw_hid.h"
+#include <string.h>
 
 static bool secondary_layout_left_shift_down = false;
 
@@ -12,58 +14,114 @@ const uint16_t secondary_layout_keycodes[] =
 
 uint16_t secondary_layout_map_keycode(uint16_t keycode)
 {
-  return secondary_layout_keycodes[keycode - SL_FIRST - 1];
+    return secondary_layout_keycodes[keycode - SL_FIRST - 1];
 }
 
 void secondary_layout_register_code(uint16_t keycode)
 {
-  keycode = secondary_layout_map_keycode(keycode);
+    keycode = secondary_layout_map_keycode(keycode);
 
-  if (secondary_layout_left_shift_down)
+    if (secondary_layout_left_shift_down)
+        unregister_code(KC_LSFT);
+
+    register_code(KC_LALT);
+    register_code(KC_LSFT);
+    unregister_code(KC_LALT);
     unregister_code(KC_LSFT);
 
-  register_code(KC_LALT);
-  register_code(KC_LSFT);
-  unregister_code(KC_LALT);
-  unregister_code(KC_LSFT);
+    if (secondary_layout_left_shift_down)
+        register_code(KC_LSFT);
 
-  if (secondary_layout_left_shift_down)
-    register_code(KC_LSFT);
-
-  register_code(keycode);
+    register_code(keycode);
 }
 
 void secondary_layout_unregister_code(uint16_t keycode)
 {
-  keycode = secondary_layout_map_keycode(keycode);
+    keycode = secondary_layout_map_keycode(keycode);
 
-  unregister_code(keycode);
+    unregister_code(keycode);
 
-  if (secondary_layout_left_shift_down)
+    if (secondary_layout_left_shift_down)
+        unregister_code(KC_LSFT);
+
+    register_code(KC_LALT);
+    register_code(KC_LSFT);
+    unregister_code(KC_LALT);
     unregister_code(KC_LSFT);
 
-  register_code(KC_LALT);
-  register_code(KC_LSFT);
-  unregister_code(KC_LALT);
-  unregister_code(KC_LSFT);
-
-  if (secondary_layout_left_shift_down)
-    register_code(KC_LSFT);
+    if (secondary_layout_left_shift_down)
+        register_code(KC_LSFT);
 }
 
-bool secondary_layout_process_record_user(uint16_t keycode, keyrecord_t *record)
+bool secondary_layout_process_record(uint16_t keycode, keyrecord_t* record)
 {
-  if (keycode == KC_LSFT)
-  {
-    secondary_layout_left_shift_down = record->event.pressed;
-  }
-  else if (keycode > SL_FIRST && keycode < SL_LAST)
-  {
-    if (record->event.pressed)
-      secondary_layout_register_code(keycode);
-    else
-      secondary_layout_unregister_code(keycode);
-    return false;
-  }
-  return true;
+    if (keycode == KC_LSFT)
+    {
+        secondary_layout_left_shift_down = record->event.pressed;
+    }
+    else if (keycode > SL_FIRST && keycode < SL_LAST)
+    {
+        if (record->event.pressed)
+            secondary_layout_register_code(keycode);
+        else
+            secondary_layout_unregister_code(keycode);
+        return false;
+    }
+    return true;
+}
+
+static char kleypboard_buffer[KLEYPBOARD_BUFFER_SIZE] = { 0 };
+static uint8_t kleypboard_buffer_length = 0;
+
+void kleypboard_process_hid(uint8_t* data, uint8_t length)
+{
+    if (length > 0 && data[0] == 0xfd)
+    {
+        length -= 2;
+        int length1 = KLEYPBOARD_BUFFER_SIZE - kleypboard_buffer_length - 1;
+        if (length1 > length)
+            length1 = length;
+        memcpy(kleypboard_buffer + kleypboard_buffer_length, data + 1, length1);
+        kleypboard_buffer_length += length1;
+    }
+}
+
+// support VIA
+__attribute__((weak)) void raw_hid_receive(uint8_t *data, uint8_t length)
+{
+    kleypboard_process_hid(data, length);
+}
+
+// support using custom HID handler
+__attribute__((weak)) void raw_hid_receive_kb(uint8_t *data, uint8_t length)
+{
+    kleypboard_process_hid(data, length);
+}
+
+bool kleypboard_process_record(uint16_t keycode, keyrecord_t* record)
+{
+    if ((keycode == KL_PAST || keycode == KL_PACL) && record->event.pressed)
+    {
+        send_string_with_delay(kleypboard_buffer, 10);
+        if (keycode == KL_PACL)
+        {
+            kleypboard_buffer_length = 0;
+            memset(kleypboard_buffer, 0, sizeof(kleypboard_buffer));
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+bool dmatx1_process_record(uint16_t keycode, keyrecord_t* record)
+{
+    if (!secondary_layout_process_record(keycode, record))
+        return false;
+
+    if (!kleypboard_process_record(keycode, record))
+        return false;
+
+    return true;
 }
